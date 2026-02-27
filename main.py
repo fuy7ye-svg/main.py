@@ -11,9 +11,10 @@ app = Flask('')
 def home():
     return "Welcome Bot is Online!"
 
-def run_flask():
-    # Render يتطلب ربط الخدمة بـ Port معين تلقائياً
+   def run():
+    # Render يرسل رقم المنفذ في متغير بيئة اسمه PORT
     port = int(os.environ.get("PORT", 8080))
+    # استخدام 0.0.0.0 ضروري جداً ليعمل على السيرفر
     app.run(host='0.0.0.0', port=port)
 
 def keep_alive():
