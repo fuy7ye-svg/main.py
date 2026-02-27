@@ -4,71 +4,63 @@ import os
 from flask import Flask
 from threading import Thread
 
-# --- إعداد Flask لإبقاء البوت مستيقظاً على Render ---
+# --- إعداد Flask لإبقاء البوت مستيقظاً ---
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "Welcome Bot is Online!"
+    return "Bot is Online!"
 
-   def run():
-    # Render يرسل رقم المنفذ في متغير بيئة اسمه PORT
+def run():
+    # تأكد أن هذا السطر والسطر الذي يليه يبدآن بـ 4 مسافات
     port = int(os.environ.get("PORT", 8080))
-    # استخدام 0.0.0.0 ضروري جداً ليعمل على السيرفر
     app.run(host='0.0.0.0', port=port)
 
 def keep_alive():
-    t = Thread(target=run_flask)
-    t.daemon = True
+    t = Thread(target=run)
     t.start()
 
 # --- إعدادات البوت ---
 intents = discord.Intents.default()
-intents.members = True  # ضروري جداً لرصد دخول الأعضاء الجدد
+intents.members = True          
+intents.message_content = True  
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# --- نظام الترحيب ---
-
 @bot.event
 async def on_ready():
-    print(f'✅ بوت الترحيب يعمل الآن باسم: {bot.user.name}')
+    print(f'✅ تم تشغيل البوت بنجاح: {bot.user.name}')
 
 @bot.event
 async def on_member_join(member):
-    # ضع هنا ID القناة التي تريد الترحيب فيها
+    # ID القناة الخاص بك
     WELCOME_CHANNEL_ID = 1476529909558935655  
     
     channel = bot.get_channel(WELCOME_CHANNEL_ID)
     
     if channel:
         try:
-            # إعداد رسالة الترحيب (Embed)
             embed = discord.Embed(
-                title="عضو جديد انضم إلينا! ✨",
-                description=f"حيّاك الله {member.mention} في سيرفرنا، نورتنا بقدومك! 🎉",
-                color=0x2f3136 # يمكنك تغيير اللون حسب رغبتك
+                description=f"**حيّاك الله** {member.mention} في سيرفرنا! 🎉",
+                color=0x2f3136
             )
+            # جلب صورة العضو
+            avatar_url = member.display_avatar.url
+            embed.set_image(url=avatar_url)
             
-            # إضافة صورة العضو وصورة السيرفر
-            embed.set_thumbnail(url=member.display_avatar.url)
-            embed.set_footer(text=f"أنت العضو رقم {len(list(member.guild.members))}")
-            
-            await channel.send(content=member.mention, embed=embed)
+            await channel.send(embed=embed)
             print(f"✅ تم إرسال الترحيب لـ {member.name}")
-            
         except Exception as e:
-            print(f"❌ خطأ أثناء إرسال رسالة الترحيب: {e}")
+            print(f"❌ خطأ أثناء إرسال الرسالة: {e}")
     else:
-        print("❌ لم يتم العثور على قناة الترحيب، تأكد من الـ ID ومن وجود البوت في القناة.")
+        print("❌ لم يتم العثور على القناة، تأكد من الـ ID.")
 
 # --- تشغيل البوت ---
 if __name__ == "__main__":
-    keep_alive() # تشغيل السيرفر الوهمي
+    keep_alive()  # تشغيل خادم الويب
     
-    # تأكد من إضافة DISCORD_TOKEN في إعدادات Render (Environment Variables)
     token = os.getenv('DISCORD_TOKEN')
     if token:
         bot.run(token)
     else:
-        print("❌ خطأ: لم يتم العثور على التوكن في إعدادات Render!")
+        print("❌ خطأ: لم يتم العثور على DISCORD_TOKEN!")
