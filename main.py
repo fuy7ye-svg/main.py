@@ -1,54 +1,62 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import os
 from flask import Flask
 from threading import Thread
+import requests
+import time
 
-# 1. إعداد خادم Flask بسيط لإيهام Render أن التطبيق هو موقع ويب
+# 1. إعداد خادم Flask
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "Bot is running!"
+    return "Bot is alive and kicking!"
 
 def run():
-    # Render يمرر المنفذ تلقائياً عبر متغير البيئة PORT
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
+# 2. وظيفة التنبيه الذاتي (Self-Ping)
+def ping_self():
+    # انتظر قليلاً حتى يبدأ السيرفر بالعمل
+    time.sleep(30)
+    # استبدل 'your-app-name' باسم تطبيقك في Render
+    # أو سيحاول الكود استنتاجه من البيئة إذا كان متاحاً
+    url = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'localhost')}"
+    
+    while True:
+        try:
+            requests.get(url)
+            print("Successfully pinged self!")
+        except Exception as e:
+            print(f"Ping failed: {e}")
+        # انتظر 10 دقائق (600 ثانية) قبل التنبيه القادم
+        time.sleep(600)
 
-# 2. إعدادات البوت (Intents)
+def keep_alive():
+    # تشغيل خادم Flask
+    t1 = Thread(target=run)
+    t1.start()
+    # تشغيل التنبيه الذاتي
+    t2 = Thread(target=ping_self)
+    t2.daemon = True
+    t2.start()
+
+# 3. إعدادات البوت
 intents = discord.Intents.default()
-intents.members = True          # ضروري للترحيب بالأعضاء
-intents.message_content = True  # ضروري لقراءة محتوى الرسائل
+intents.members = True
+intents.message_content = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f'✅ تم تسجيل الدخول باسم: {bot.user.name}')
+    print(f'✅ {bot.user.name} جاهز للعمل!')
 
-@bot.event
-async def on_member_join(member):
-    # تأكد أن اسم القناة مطابق تماماً لما هو موجود في سيرفرك
-    channel = discord.utils.get(member.guild.channels, name='✈️welcome')
-    if channel:
-        embed = discord.Embed(
-            description=f"**حيّاك الله** {member.mention} في سيرفرنا! 🎉",
-            color=0x2f3136
-        )
-        embed.set_image(url=member.display_avatar.url)
-        await channel.send(embed=embed)
+# --- أضف بقية أوامر البوت هنا ---
 
-# 3. تشغيل الخادم ثم البوت
 if __name__ == "__main__":
-    keep_alive()  # تشغيل Flask في الخلفية
-    
+    keep_alive()
     token = os.getenv('DISCORD_TOKEN')
-    if token:
-        bot.run(token)
-    else:
-        print("❌ خطأ: لم يتم العثور على DISCORD_TOKEN في متغيرات البيئة!")
+    bot.run(token)
